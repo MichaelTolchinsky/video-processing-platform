@@ -10,7 +10,7 @@ Use this skill for implementation work after the scope and acceptance criteria a
 
 ## Workflow
 
-1. Read `AGENTS.md`, `.github/instructions/coding-practices.md`, and, for schema work, `.github/instructions/database-migrations.md`. Then read the relevant sections of `docs/ARCHITECTURE.md` and `docs/DEVELOPMENT.md`, and inspect the affected code and nearby tests.
+1. Read `AGENTS.md`, `.github/instructions/project-shape.md`, `.github/instructions/coding-practices.md`, and, for schema work, `.github/instructions/database-migrations.md`. Then read the relevant sections of `docs/ARCHITECTURE.md` and `docs/DEVELOPMENT.md`, and inspect the affected code and nearby tests.
 2. Trace the change across every affected boundary: FastAPI route, service, repository, database model/migration, S3/SQS client, worker job, Docker image, CDK stack, and deployment workflow.
 3. Reuse existing modules and seams. Keep route handlers thin, business rules in services, persistence in repositories, and AWS access behind the existing storage and queue helpers.
 4. Implement typed, explicit async code. Match the surrounding `AsyncSession`, `async with` client, Pydantic response-model, and `Annotated` dependency patterns.

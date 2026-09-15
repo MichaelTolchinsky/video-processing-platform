@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Repository Code Review
 
-Review the complete change set against `AGENTS.md`, `.github/instructions/coding-practices.md`, `.github/instructions/database-migrations.md` when relevant, the originating request, and the relevant architecture and development documentation. Report findings only; do not edit files unless explicitly asked to fix them.
+Review the complete change set against `AGENTS.md`, `.github/instructions/project-shape.md`, `.github/instructions/coding-practices.md`, `.github/instructions/database-migrations.md` when relevant, the originating request, and the relevant architecture and development documentation. Report findings only; do not edit files unless explicitly asked to fix them.
 
 ## Review pass
 

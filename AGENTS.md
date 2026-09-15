@@ -10,14 +10,10 @@ These instructions apply to all work in this repository. Keep changes small, exp
 4. Trace the complete data flow across API, database, S3, SQS, worker, and infrastructure when a change crosses a service boundary.
 5. Preserve unrelated work already present in the working tree.
 
-## Project shape
+## Referenced project context
 
-- Python package code lives under `src/video_processing/`.
-- Tests live under `tests/` and mirror API, common, and worker responsibilities.
-- AWS CDK infrastructure lives under `infra/`.
-- Alembic migrations live under `migrations/versions/`.
-- Local integration dependencies are provided by `docker-compose.yaml`, using Floci for the S3/SQS emulator.
-- Dependencies and tool configuration are defined in `pyproject.toml` and locked in `uv.lock`.
+For the repository map and runtime boundaries, read
+[`project-shape.md`](.github/instructions/project-shape.md).
 
 ## Referenced practices
 
