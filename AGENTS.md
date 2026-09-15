@@ -57,6 +57,7 @@ Every behavior change should have focused regression coverage unless the behavio
 - Changes reach `main` through a pull request. Keep commits focused and describe the behavior or decision they introduce.
 - Before opening a pull request, inspect the diff, run the relevant validation, and mention migration or deployment implications.
 - Never put credentials, tokens, `.env` values, generated artifacts, or local machine state into commits.
+- Keep commit authorship personal and accurate. Never add a `Co-authored-by: Copilot` trailer or attribute Copilot as an author.
 - Treat deployment workflow and infrastructure changes as production-impacting. Review IAM, network exposure, data migration, rollback, and secret handling explicitly.
 
 ## Completion criteria
