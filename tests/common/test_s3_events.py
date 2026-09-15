@@ -79,8 +79,8 @@ def test_parse_video_id_from_key_extracts_uuid():
     assert parse_video_id_from_key(f"uploads/{_VIDEO_ID}/original.mp4") == _VIDEO_ID
 
 
-def test_parse_video_id_from_key_tolerates_localstack_trailing_backslash():
-    # LocalStack (as of 3.8.1) appends a literal backslash to presigned-PUT
+def test_parse_video_id_from_key_tolerates_emulator_trailing_backslash():
+    # The local AWS emulator can append a literal backslash to presigned-PUT
     # upload keys; real AWS S3 never does this.
     assert parse_video_id_from_key(f"uploads/{_VIDEO_ID}/original.mp4\\") == _VIDEO_ID
 

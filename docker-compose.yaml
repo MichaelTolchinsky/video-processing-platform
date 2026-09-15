@@ -16,10 +16,10 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       AWS_REGION: eu-north-1
       S3_BUCKET_NAME: video-processing-local
-      S3_ENDPOINT_URL: http://localstack:4566
+      S3_ENDPOINT_URL: http://floci:4566
       S3_PUBLIC_ENDPOINT_URL: http://localhost:4566
-      SQS_QUEUE_URL: http://localstack:4566/000000000000/video-processing-local
-      SQS_ENDPOINT_URL: http://localstack:4566
+      SQS_QUEUE_URL: http://floci:4566/000000000000/video-processing-local
+      SQS_ENDPOINT_URL: http://floci:4566
       DB_POOL_SIZE: "10"
       DB_MAX_OVERFLOW: "10"
       DB_POOL_TIMEOUT: "5"
@@ -30,7 +30,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      localstack:
+      floci:
         condition: service_healthy
 
   worker:
@@ -43,9 +43,9 @@ services:
       AWS_SECRET_ACCESS_KEY: test
       AWS_REGION: eu-north-1
       S3_BUCKET_NAME: video-processing-local
-      S3_ENDPOINT_URL: http://localstack:4566
-      SQS_QUEUE_URL: http://localstack:4566/000000000000/video-processing-local
-      SQS_ENDPOINT_URL: http://localstack:4566
+      S3_ENDPOINT_URL: http://floci:4566
+      SQS_QUEUE_URL: http://floci:4566/000000000000/video-processing-local
+      SQS_ENDPOINT_URL: http://floci:4566
       # Must cover WORKER_CONCURRENCY concurrent videos each holding one
       # connection for their full processing duration, or the worker can
       # deadlock itself waiting on its own pool.
@@ -57,7 +57,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      localstack:
+      floci:
         condition: service_healthy
 
   db:
@@ -76,26 +76,26 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  localstack:
-    image: localstack/localstack:3.8.1
+  floci:
+    image: floci/floci:latest-compat
     environment:
       AWS_DEFAULT_REGION: eu-north-1
       SERVICES: s3,sqs
       S3_BUCKET_NAME: video-processing-local
       SQS_QUEUE_NAME: video-processing-local
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:4566/_localstack/health | grep -q '\"s3\"'"]
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:4566/_floci/init | grep -q '\"ready\"'"]
       interval: 5s
       timeout: 5s
       retries: 12
     ports:
       - "4566:4566"
     volumes:
-      - ./localstack/init-s3.sh:/etc/localstack/init/ready.d/init-s3.sh:ro
-      # Runs after init-s3.sh (LocalStack executes ready.d scripts in
+      - ./floci/init-s3.sh:/etc/floci/init/ready.d/init-s3.sh:ro
+      # Runs after init-s3.sh (Floci executes ready hooks in
       # lexicographical order, and "init-s3.sh" sorts before "init-sqs.sh"),
       # so the bucket already exists when this wires the notification to it.
-      - ./localstack/init-sqs.sh:/etc/localstack/init/ready.d/init-sqs.sh:ro
+      - ./floci/init-sqs.sh:/etc/floci/init/ready.d/init-sqs.sh:ro
 
 volumes:
   postgres_data:

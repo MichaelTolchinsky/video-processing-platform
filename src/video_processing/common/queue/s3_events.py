@@ -16,7 +16,7 @@ from urllib.parse import quote_plus, unquote_plus
 # Matches the object key the API generates for uploads, e.g.
 # "uploads/28e8c6e2-.../original.mp4". The extension is optional because we
 # don't want a naming edge case to silently drop an otherwise valid event.
-# The trailing "\\?" tolerates a LocalStack-only quirk (as of 3.8.1): it
+# The trailing "\\?" tolerates an emulator-only quirk: it
 # stores presigned-PUT uploads with a literal trailing backslash on the key,
 # and reports that same real key in the ObjectCreated notification. Real AWS
 # S3 never does this. We must keep that character when it's part of the
@@ -49,7 +49,7 @@ def parse_object_created_events(message_body: str) -> list[ObjectCreatedEvent]:
             ObjectCreatedEvent(
                 bucket=s3_data["bucket"]["name"],
                 # S3 URL-encodes object keys in event notifications. Keep the
-                # decoded key exactly as reported (see the LocalStack note
+                # decoded key exactly as reported (see the emulator note
                 # above) so it still matches the real, stored object key.
                 key=unquote_plus(s3_data["object"]["key"]),
             )
