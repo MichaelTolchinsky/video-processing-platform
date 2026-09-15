@@ -2,7 +2,7 @@
 
 Full local setup and commands for this project. See [`readme.md`](../readme.md) for the project overview and [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) for design details.
 
-Everything runs in Docker Compose — API, worker, PostgreSQL, and a LocalStack container standing in for S3 + SQS. No AWS account or credentials are needed for local development.
+Everything runs in Docker Compose - API, worker, PostgreSQL, and a Floci container standing in for S3 + SQS. No AWS account or credentials are needed for local development.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ This starts:
 - `api` — FastAPI on `http://localhost:8000`
 - `worker` — the SQS poll loop (no exposed port)
 - `db` — PostgreSQL 16 on `localhost:5432`
-- `localstack` — S3 + SQS on `http://localhost:4566`, with the `video-processing-local` bucket and queue created automatically (see `localstack/init-s3.sh` and `localstack/init-sqs.sh`), including the bucket's `uploads/` → queue notification wiring that mirrors production.
+- `floci` - S3 + SQS on `http://localhost:4566`, with the `video-processing-local` bucket and queue created automatically (see `floci/init-s3.sh` and `floci/init-sqs.sh`), including the bucket's `uploads/` -> queue notification wiring that mirrors production.
 
 ## Run the test suite
 
@@ -95,17 +95,17 @@ curl -X POST http://localhost:8000/videos/PASTE_VIDEO_ID/retry
 
 Returns 409 if the video isn't currently `"failed"`. Re-publishes the original upload's S3 event to the queue, so only the jobs that didn't complete are re-run.
 
-**6. Inspect LocalStack directly (optional)**
+**6. Inspect Floci directly (optional)**
 
 ```bash
 # List uploaded originals
-docker compose exec localstack awslocal s3 ls s3://video-processing-local/uploads/ --recursive
+docker compose exec floci aws s3 ls s3://video-processing-local/uploads/ --recursive
 
 # List generated assets
-docker compose exec localstack awslocal s3 ls s3://video-processing-local/assets/ --recursive
+docker compose exec floci aws s3 ls s3://video-processing-local/assets/ --recursive
 
 # Peek at a queue message without consuming it (useful when debugging the worker)
-docker compose exec localstack awslocal sqs receive-message \
+docker compose exec floci aws sqs receive-message \
   --queue-url http://localhost:4566/000000000000/video-processing-local \
   --max-number-of-messages 1 --visibility-timeout 3600
 ```
