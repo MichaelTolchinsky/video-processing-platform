@@ -1,7 +1,7 @@
 [project]
 name = "video-processing"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "aioboto3>=15.5.0",
     "alembic>=1.18.5",
@@ -12,6 +12,7 @@ dependencies = [
     "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.14.2",
     "sqlalchemy>=2.0.51",
+    "temporalio>=1.33.0",
     "uvicorn>=0.51.0",
 ]
 
@@ -36,7 +37,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 line-length = 100
 extend-exclude = ["migrations/versions"]
 
