@@ -33,7 +33,15 @@ async def _run(*args: str) -> bytes:
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await process.communicate()
+    try:
+        stdout, stderr = await process.communicate()
+    except asyncio.CancelledError:
+        # A cancelled activity (worker shutdown) must not leave the child
+        # behind: asyncio does not reap it, so it keeps running and holding
+        # its temp directory after the container is gone.
+        process.kill()
+        await process.wait()
+        raise
     if process.returncode != 0:
         raise RuntimeError(
             f"Command {args!r} exited with {process.returncode}: {stderr.decode()}"

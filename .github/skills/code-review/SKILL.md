@@ -22,7 +22,7 @@ Review the complete change set against `AGENTS.md`, `.github/instructions/coding
 - Async request paths must not call blocking database, AWS, filesystem, or subprocess APIs.
 - Pydantic schemas should constrain trust-boundary inputs and preserve the established response shape.
 - Exceptions should be narrow and surfaced through existing HTTP, logging, and retry patterns. Flag broad catches and silent fallbacks.
-- Types should be explicit and compatible with Python 3.12 and the configured Ruff rules.
+- Types should be explicit and compatible with Python 3.14 and the configured Ruff rules.
 
 ## Database and distributed-system checks
 

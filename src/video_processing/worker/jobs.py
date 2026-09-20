@@ -66,8 +66,10 @@ async def claim_job(db: AsyncSession, video: Video, job_type: JobType) -> Proces
 async def _all_jobs_completed(db: AsyncSession, video: Video) -> bool:
     """Whether every job type this video should have has completed.
 
-    Every upload triggers one ProcessingJob per JobType (see worker/main.py),
-    so "all done" is simply "as many completed rows as there are job types".
+    Each job type gets at most one ProcessingJob row per video, created when
+    its activity first claims it, so "all done" is simply "as many completed
+    rows as there are job types". A job that has not run yet has no row at
+    all, which this count handles without special-casing.
     """
     completed_count = await processing_job_repository.count_completed_for_video(db, video.id)
     return completed_count >= len(JobType.__members__)
@@ -147,11 +149,16 @@ async def complete_transcode_job(
 
 
 async def fail_job(db: AsyncSession, job: ProcessingJob, video: Video) -> None:
-    """Mark the job and video failed.
+    """Mark this job -- and only this job -- and the video failed.
 
-    The SQS message is left undeleted by the caller, so SQS will redeliver
-    it and `claim_job` will retry — this status is not final until the
-    queue's maxReceiveCount is exceeded and the message moves to the DLQ.
+    Called once per attempt by the activity that owns the job, so `attempts`
+    keeps incrementing across Temporal's retries. A sibling job that
+    succeeded is untouched, and one that never ran has no row to mark.
+
+    The status is not final: it means "this stopped and nothing is currently
+    driving it". Once the retry policy is exhausted the workflow execution
+    ends Failed, and `POST /videos/{id}/retry` starts a fresh one that
+    re-runs only the jobs that are not yet completed.
     """
     job.status = JobStatus.FAILED
     video.status = VideoStatus.FAILED

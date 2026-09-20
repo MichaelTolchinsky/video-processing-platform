@@ -27,7 +27,7 @@ bash scripts/ci-check.sh test
 
 ## Python and FastAPI standards
 
-- Target Python 3.12 and follow the Ruff configuration in `pyproject.toml`.
+- Target Python 3.14 and follow the Ruff configuration in `pyproject.toml`.
 - Prefer precise types, `collections.abc` interfaces, explicit return types, and narrow exception handling.
 - Use UTC-aware datetimes and preserve the project’s UUID, enum, and response-model conventions.
 - Validate at the API boundary with Pydantic and map expected domain failures to the established HTTP responses.

@@ -12,7 +12,7 @@ These practices apply to application, worker, and infrastructure code in this re
 
 ## Python and async code
 
-- Target Python 3.12 and follow the Ruff rules in `pyproject.toml`.
+- Target Python 3.14 (pinned in `.python-version`, enforced by `requires-python` in `pyproject.toml`) and follow the Ruff rules in `pyproject.toml`.
 - Prefer precise types, explicit return types, and narrow exception handling.
 - Use async database and AWS APIs consistently in request and worker paths.
 - Avoid blocking subprocess, filesystem, database, or AWS calls in async code.
