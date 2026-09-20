@@ -27,10 +27,21 @@ class Settings(BaseSettings):
     s3_public_endpoint_url: str | None = None
     sqs_queue_url: str | None = None
     sqs_endpoint_url: str | None = None
-    # How many SQS messages (videos) the worker processes concurrently.
-    # Bounded by ffmpeg's CPU cost per video and the Fargate task's vCPUs --
-    # too high just adds context-switching, not real throughput. SQS itself
-    # caps a single receive_message call at 10.
+    # Optional here, validated in get_temporal_client(): Settings is shared
+    # and constructed at import time, so a required field would stop the api
+    # and the alembic container -- neither of which builds a Temporal client
+    # -- from importing at all. Same shape as sqs_queue_url above and
+    # sqlalchemy_database_url below.
+    temporal_address: str | None = None
+    temporal_namespace: str = "default"
+    temporal_task_queue: str = "video-processing"
+    # Worker(max_concurrent_activities=...) on the Temporal worker: how many
+    # activities run at once, which is not a video count -- one video occupies
+    # up to 3 slots (metadata and thumbnail together, then transcode).
+    # Bounded by ffmpeg's CPU cost and the task's vCPUs, since too high just
+    # adds context-switching rather than real throughput. db_pool_size must be
+    # at least this value: every running activity holds one connection for the
+    # activity's full duration, or the worker waits on its own pool.
     worker_concurrency: int = 2
 
     @property

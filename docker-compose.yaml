@@ -33,9 +33,43 @@ services:
       floci:
         condition: service_healthy
 
-  worker:
+  sqs-shim:
     build: .
-    command: ["python", "-m", "video_processing.worker.main"]
+    command: ["python", "-m", "video_processing.worker.sqs_shim"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://video_processing:video_processing@db:5432/video_processing
+      PYTHONPATH: /app/src
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: eu-north-1
+      S3_BUCKET_NAME: video-processing-local
+      SQS_QUEUE_URL: http://floci:4566/000000000000/video-processing-local
+      SQS_ENDPOINT_URL: http://floci:4566
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: video-processing
+      # One short read per message before start_workflow -- no
+      # concurrency-gated resource, so a small fixed pool is correct.
+      # Deliberately does NOT set WORKER_CONCURRENCY: that setting now governs
+      # only the Temporal worker.
+      DB_POOL_SIZE: "2"
+      DB_MAX_OVERFLOW: "1"
+    volumes:
+      - ./src:/app/src
+    # Covers the startup window where the port is open but the server is not
+    # yet SERVING, and the first-run window before the namespace exists.
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+
+  temporal-worker:
+    build: .
+    command: ["python", "-m", "video_processing.worker.temporal_worker"]
     environment:
       DATABASE_URL: postgresql+psycopg://video_processing:video_processing@db:5432/video_processing
       PYTHONPATH: /app/src
@@ -44,20 +78,25 @@ services:
       AWS_REGION: eu-north-1
       S3_BUCKET_NAME: video-processing-local
       S3_ENDPOINT_URL: http://floci:4566
-      SQS_QUEUE_URL: http://floci:4566/000000000000/video-processing-local
-      SQS_ENDPOINT_URL: http://floci:4566
-      # Must cover WORKER_CONCURRENCY concurrent videos each holding one
-      # connection for their full processing duration, or the worker can
-      # deadlock itself waiting on its own pool.
-      DB_POOL_SIZE: "2"
-      DB_MAX_OVERFLOW: "1"
-      WORKER_CONCURRENCY: "2"
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: video-processing
+      # Now means Worker(max_concurrent_activities=...), not an SQS batch
+      # size. DB_POOL_SIZE must cover it: every running activity holds one
+      # connection for its full duration, or the worker deadlocks on its own
+      # pool.
+      WORKER_CONCURRENCY: "4"
+      DB_POOL_SIZE: "4"
+      DB_MAX_OVERFLOW: "2"
     volumes:
       - ./src:/app/src
+    restart: on-failure
     depends_on:
       db:
         condition: service_healthy
       floci:
+        condition: service_healthy
+      temporal:
         condition: service_healthy
 
   db:
@@ -97,5 +136,89 @@ services:
       # so the bucket already exists when this wires the notification to it.
       - ./floci/init-sqs.sh:/etc/floci/init/ready.d/init-sqs.sh:ro
 
+  temporal-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal -d temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Deliberately no published port: nothing outside the compose network
+    # needs it, and the application db already owns localhost:5432. Temporal's
+    # schema is its own concern, managed by temporal-sql-tool rather than
+    # Alembic, so it gets its own instance instead of coupling the two
+    # migration stories.
+    volumes:
+      - temporal_postgres_data:/var/lib/postgresql/data
+
+  temporal:
+    image: temporalio/server:1.32.0
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: temporal-db
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      # Relative to the image's working directory, /etc/temporal, which is
+      # exactly where the volume below mounts it. The image ships no config/
+      # directory at all -- the mount creates it. An absolute path, or a mount
+      # anywhere else, exits 1 with "unable to create dynamic config client".
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    volumes:
+      # Kept inside the repo rather than /tmp: Docker Desktop on macOS does
+      # not share /tmp by default, and a bind mount from there silently
+      # presents an empty directory that looks just like a wrong path.
+      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    # The server binds to its own container IP, not 127.0.0.1, so the probe
+    # must target $(hostname). BusyBox nc has no -z, hence the redirect from
+    # /dev/null.
+    # ponytail: TCP-open only, not gRPC SERVING -- the server image ships no
+    # health probe, curl, or temporal CLI. Add a grpc_health_probe sidecar only
+    # if the open-but-not-serving window actually causes a problem.
+    healthcheck:
+      test: ["CMD-SHELL", "nc -w 1 \"$$(hostname)\" 7233 </dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    depends_on:
+      temporal-db:
+        condition: service_healthy
+
+  temporal-ui:
+    image: temporalio/ui:2.54.1
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - temporal
+
+  # One-off operator tooling: schema creation and namespace registration.
+  # `profiles` keeps it out of `docker compose up`, the same way migrations are
+  # an explicit step and never run on startup. See docs/DEVELOPMENT.md's
+  # "First time only" section for the two commands, which must run before the
+  # first full `up`.
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.32.0
+    profiles: ["setup"]
+    environment:
+      SQL_PLUGIN: postgres12
+      SQL_HOST: temporal-db
+      SQL_PORT: "5432"
+      SQL_USER: temporal
+      SQL_PASSWORD: temporal
+      TEMPORAL_ADDRESS: temporal:7233
+    depends_on:
+      temporal-db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  temporal_postgres_data:

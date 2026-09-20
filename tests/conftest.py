@@ -17,6 +17,7 @@ os.environ.setdefault(
 )
 
 from collections.abc import AsyncIterator  # noqa: E402
+from unittest.mock import AsyncMock  # noqa: E402
 
 import pytest  # noqa: E402
 from sqlalchemy.ext.asyncio import (  # noqa: E402
@@ -78,3 +79,20 @@ class _FakeAsyncClientContext:
 
 def fake_async_client(client: object) -> _FakeAsyncClientContext:
     return _FakeAsyncClientContext(client)
+
+
+class _FakeTemporalClient:
+    """Minimal stand-in for `temporalio.client.Client`: `start_workflow` only.
+
+    Nothing to wrap here -- `get_temporal_client` returns an awaited client,
+    not an async context manager -- but the restricted surface is the point: a
+    bare AsyncMock would silently accept any other call, so a test that
+    reaches past `start_workflow` fails loudly instead.
+    """
+
+    def __init__(self) -> None:
+        self.start_workflow = AsyncMock()
+
+
+def fake_temporal_client() -> _FakeTemporalClient:
+    return _FakeTemporalClient()

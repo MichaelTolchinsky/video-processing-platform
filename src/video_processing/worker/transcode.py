@@ -51,6 +51,14 @@ async def transcode(video_path: Path, output_path: Path, rendition: Rendition) -
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    _stdout, stderr = await process.communicate()
+    try:
+        _stdout, stderr = await process.communicate()
+    except asyncio.CancelledError:
+        # Same guard as processing.py::_run, and it matters most here: an
+        # orphaned 30-minute encode holds a CPU core and its temp directory
+        # long after the worker it belonged to is gone.
+        process.kill()
+        await process.wait()
+        raise
     if process.returncode != 0:
         raise RuntimeError(f"ffmpeg transcode exited with {process.returncode}: {stderr.decode()}")

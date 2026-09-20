@@ -31,14 +31,6 @@ For application, worker, and infrastructure coding conventions, read
 For SQLAlchemy, Alembic, schema compatibility, and deployment ordering, read
 [`database-migrations.md`](.github/instructions/database-migrations.md).
 
-## Work in progress
-
-The worker's orchestration is being migrated from the SQS poll loop to Temporal, locally
-first. Before changing anything under `src/video_processing/worker/`, read
-[`docs/temporal-migration.md`](docs/temporal-migration.md) - it is the authoritative spec
-for that work and supersedes the worker sections of `docs/ARCHITECTURE.md` until the
-cutover lands. Delete this section when that document is folded into the permanent docs.
-
 ## Validation
 
 CI is the authoritative merge gate for linting and tests. The pull-request workflow runs Ruff and pytest, and the repository ruleset requires both checks. Run the smallest relevant checks locally when practical for faster feedback. The standard Python checks are:
